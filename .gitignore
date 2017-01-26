@@ -1,0 +1,9 @@
+SportsStore/SportsStore.Domain/bin/
+SportsStore/SportsStore.Domain/obj/
+SportsStore/SportsStore.UnitTests/bin/
+SportsStore/SportsStore.UnitTests/obj/
+SportsStore/SportsStore.WebUI/bin/
+SportsStore/SportsStore.WebUI/obj/
+SportsStore/packages/
+SportsStore/.vs/
+*.rej
