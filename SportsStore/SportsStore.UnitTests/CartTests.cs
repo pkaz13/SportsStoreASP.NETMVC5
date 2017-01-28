@@ -141,7 +141,7 @@ namespace SportsStore.UnitTests
             Cart cart = new Cart();
 
             // przygotowanie - utworzenie kontrolera
-            CartController target = new CartController(mock.Object);
+            CartController target = new CartController(mock.Object, null);
 
             // działanie - dodanie produktu do koszyka
             target.AddToCart(cart, 1, null);
@@ -164,7 +164,7 @@ namespace SportsStore.UnitTests
             Cart cart = new Cart();
 
             // przygotowanie - utworzenie kontrolera
-            CartController target = new CartController(mock.Object);
+            CartController target = new CartController(mock.Object, null);
 
             // działanie - dodanie produktu do koszyka
             RedirectToRouteResult result = target.AddToCart(cart, 2, "myUrl");
@@ -181,7 +181,7 @@ namespace SportsStore.UnitTests
             Cart cart = new Cart();
 
             // przygotowanie - utworzenie kontrolera
-            CartController target = new CartController(null);
+            CartController target = new CartController(null, null);
 
             // działanie - wywołanie metody akcji Index
             CartIndexViewModel result
@@ -190,6 +190,81 @@ namespace SportsStore.UnitTests
             // asercje
             Assert.AreSame(result.Cart, cart);
             Assert.AreEqual(result.ReturnUrl, "myUrl");
+        }
+
+        [TestMethod]
+        public void Cannot_Checkout_Empty_Cart()
+        {
+
+            // przygotowanie - tworzenie imitacji procesora zamówień
+            Mock<IOrderProcessor> mock = new Mock<IOrderProcessor>();
+            // przygotowanie - tworzenie pustego koszyka
+            Cart cart = new Cart();
+            // przygotowanie - tworzenie danych do wysyłki
+            ShippingDetails shippingDetails = new ShippingDetails();
+            // przygotowanie - tworzenie egzemplarza kontrolera
+            CartController target = new CartController(null, mock.Object);
+
+            // działanie
+            ViewResult result = target.Checkout(cart, shippingDetails);
+
+            // asercje - sprawdzenie, czy zamówienie zostało przekazane do procesora
+            mock.Verify(m => m.ProcessOrder(It.IsAny<Cart>(), It.IsAny<ShippingDetails>()),
+                Times.Never());
+            // asercje - sprawdzenie, czy metoda zwraca domyślny widok
+            Assert.AreEqual("", result.ViewName);
+            // asercje - sprawdzenie, czy przekazujemy prawidłowy model do widoku
+            Assert.AreEqual(false, result.ViewData.ModelState.IsValid);
+        }
+
+        [TestMethod]
+        public void Cannot_Checkout_Invalid_ShippingDetails()
+        {
+
+            // przygotowanie - tworzenie imitacji procesora zamówień
+            Mock<IOrderProcessor> mock = new Mock<IOrderProcessor>();
+            // przygotowanie - tworzenie koszyka z produktem
+            Cart cart = new Cart();
+            cart.AddItem(new Product(), 1);
+
+            // przygotowanie - tworzenie egzemplarza kontrolera
+            CartController target = new CartController(null, mock.Object);
+            // przygotowanie - dodanie błędu do modelu
+            target.ModelState.AddModelError("error", "error");
+
+            // działanie - próba zakończenia zamówienia
+            ViewResult result = target.Checkout(cart, new ShippingDetails());
+
+            // asercje - sprawdzenie, czy zamówienie zostało przekazane do procesora
+            mock.Verify(m => m.ProcessOrder(It.IsAny<Cart>(), It.IsAny<ShippingDetails>()),
+                Times.Never());
+            // asercje - sprawdzenie, czy metoda zwraca domyślny widok
+            Assert.AreEqual("", result.ViewName);
+            // asercje - sprawdzenie, czy przekazujemy prawidłowy model do widoku
+            Assert.AreEqual(false, result.ViewData.ModelState.IsValid);
+        }
+
+        [TestMethod]
+        public void Can_Checkout_And_Submit_Order()
+        {
+            // przygotowanie - tworzenie imitacji procesora zamówień
+            Mock<IOrderProcessor> mock = new Mock<IOrderProcessor>();
+            // przygotowanie - tworzenie koszyka z produktem
+            Cart cart = new Cart();
+            cart.AddItem(new Product(), 1);
+            // przygotowanie - tworzenie egzemplarza kontrolera
+            CartController target = new CartController(null, mock.Object);
+
+            // działanie - próba zakończenia zamówienia
+            ViewResult result = target.Checkout(cart, new ShippingDetails());
+
+            // asercje - sprawdzenie, czy zamówienie nie zostało przekazane do procesora
+            mock.Verify(m => m.ProcessOrder(It.IsAny<Cart>(), It.IsAny<ShippingDetails>()),
+                Times.Once());
+            // asercje - sprawdzenie, czy metoda zwraca widok Completed
+            Assert.AreEqual("Completed", result.ViewName);
+            // asercje - sprawdzenie, czy przekazujemy prawidłowy model do widoku
+            Assert.AreEqual(true, result.ViewData.ModelState.IsValid);
         }
     }
 }
